@@ -9,4 +9,4 @@
 
 ## 주요 학습 내용
 ### PPO 알고리즘 + 3DBall 예제
-![alt text](<img width="3840" height="1145" alt="Image" src="https://github.com/user-attachments/assets/23eb793f-cd12-461e-ae40-7c3bcedbf3ad" />)
+![alt text]("https://github.com/user-attachments/assets/a0ba48f1-eb75-42bd-95e5-6fc6c1b6e753")
