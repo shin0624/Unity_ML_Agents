@@ -6,6 +6,7 @@
 - 251215 : https://www.notion.so/251215_Unity-ML-Agents-2cadf6824ea5803fb272f5f2c55f9512?source=copy_link
 - 251216 : https://www.notion.so/251216_Unity-ML-Agents-2cadf6824ea58025acedce6591db0f33?source=copy_link
 - 251221 : https://www.notion.so/251221_Unity-ML-Agents-2d0df6824ea580ca822ad4c9dc21e9e4
+- 251227 : https://www.notion.so/251227_Unity-ML-Agents-2d6df6824ea58099a517ca55da232508?source=copy_link
 
 ## 주요 학습 내용
 ### PPO 알고리즘 + 3DBall 예제
