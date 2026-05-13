@@ -1,6 +1,7 @@
-torch==2.0.1
-torchvision==0.15.2
-torchaudio==2.0.2
-onnx==1.15.0
-numpy==1.23.5
-protobuf==3.20.3
+torch
+torchvision
+torchaudio
+onnx==1.12.0
+numpy
+protobuf==3.20.1
+mlagents-envs

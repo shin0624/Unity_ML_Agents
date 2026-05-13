@@ -3,6 +3,7 @@ import random
 import copy
 import datetime
 import platform
+from pathlib import Path
 import torch
 import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
@@ -10,7 +11,29 @@ from collections import deque
 from mlagents_envs.environment import UnityEnvironment, ActionTuple
 from mlagents_envs.side_channel.engine_configuration_channel\
                                                     import EngineConfigurationChannel
+import mlagents_envs.rpc_utils as rpc_utils
+from mlagents_envs.exception import UnityObservationException
 # DQN은 한 번 모델을 학습할 떄 리플레이어 메모리에서 일정 개수만큼의 경험을 랜덤하게 추출해 미니 배치 학습을 수행.
+
+_original_observation_to_np_array = rpc_utils._observation_to_np_array
+
+
+def _observation_to_np_array_safe(obs, expected_shape=None):
+    try:
+        return _original_observation_to_np_array(obs, expected_shape)
+    except UnityObservationException:
+        if obs.compression_type != rpc_utils.COMPRESSION_TYPE_NONE:
+            img = rpc_utils.process_pixels(
+                obs.compressed_data,
+                obs.shape[2],
+                list(obs.compressed_channel_mapping),
+            )
+            if list(img.shape) == [obs.shape[1], obs.shape[2], obs.shape[0]]:
+                return img
+        raise
+
+
+rpc_utils._observation_to_np_array = _observation_to_np_array_safe
                                            
 state_size = [3*2, 64,84] # 그리드 상황을 알 수 있는 시각적 관측 정보(높이 64 ,너비 84, 채널 3인 RGB 이미지. -> 목적지 관측 정보와 시각적 관측 정보를 합쳐 하나의 상태로 만들기 위해 rgb이미지를 2번 중첩하여 채널을 6으로 만든 후 목적지 관측 정보에 따라 각 채널을 전처리)
 action_size = 4 # DQN 네트워크의 출력으로 사용할 행동의 크기. [정지, 위, 아래, 왼쪽, 오른쪽]이 원래 크기이나, 학습의 효율성을 위해 정지 행동을 고려하지 않음
@@ -42,10 +65,10 @@ GOAL_OBS = 1 # 목적지 관측의 인덱스 상수
 VECTOR_OBS = 2 # 벡터 관측의 인덱스 상수.
 OBS = VISUAL_OBS # 그리드월드 환경에서 어떤 관측을 사용할 지 정하는 변수. 시각적 관측을 사용할 것이므로 VISUAL_OBS로 설정
 
-game = "ml_agents.exe"
+game = "ML_Agents.exe"
 os_name = platform.system() # 현재 운영체제 정보 가져오기
 if os_name == 'Windows' :
-    env_name = f"../ENV/{game}_{os_name}/{game}"
+    env_name = str((Path(__file__).resolve().parent / "ENV/GridWorld_Windows" / game).resolve())
 elif os_name == 'Darwin' :
     env_name = f"../ENV/{game}_{os_name}"
 
@@ -111,10 +134,11 @@ class DQNAgent:
         
         # 엡실론 그리디 기법에 따라 행동을 결정하는 코드. 엡실론 값이 0~1 사이의 랜덤 값보다 크면 에이전트는 엡실론 그리디에 따라 랜덤 행동을 시작.
         if epsilon > random.random():  
-            action = np.random.randint(0, action_size, size = (state.shape([0],1))) # 그리디월드의 행동 크기는 4이므로, randint 함수를 사용해 0~3 사이 중 하나의 값을 선택. 
+            action = np.random.randint(0, action_size, size = (state.shape[0], 1)) # 그리디월드의 행동 크기는 4이므로, randint 함수를 사용해 0~3 사이 중 하나의 값을 선택. 
         else : # 랜덤 값 > 엡실론 값이면 네트워크 결과에 따라 행동 선택
             q = self.network(torch.FloatTensor(state).to(device)) # 네트워크에 파라미터를 넣어줄 때는 상태를 FloatTensor 형태로 변환하여 넣어주어야 함.
             action = torch.argmax(q, axis = -1, keepdim = True).data.cpu().numpy() # 네트워크 결과(q)에서 가장 큰 큐 함수값을 갖는 인덱스를 action으로 선택함.
+        return action
     
     def append_sample(self, state, action, reward, next_state, done) :  # 리플레이 메모리에 데이터를 추가하는 함수.(상태, 행동, 보상, 다음 상태, 게임 종료 여부)
         self.memory.append((state, action, reward, next_state, done))
